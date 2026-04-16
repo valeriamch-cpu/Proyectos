@@ -1,55 +1,88 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Process Management</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>App de seguimiento de procesos</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-    <!-- Notification Container -->
-    <div id="notification-container" style="background-color: #f8d7da; padding: 10px; margin-bottom: 20px;">
-        <span id="notification-message">Notifications will appear here.</span>
-    </div>
+  <main class="app-shell">
+    <section id="login-view" class="login-view">
+      <div class="card login-card">
+        <h1>Seguimiento de procesos</h1>
+        <p>Ingresa con tu usuario para ver tus pendientes y los de tu equipo autorizado.</p>
 
-    <!-- Button to Open Modal Form -->
-    <button id="open-modal" onclick="openModal()">Add New Process</button>
+        <form id="login-form" class="login-form">
+          <label for="username">Usuario</label>
+          <input type="text" id="username" name="username" placeholder="Ej: maria" required />
 
-    <!-- Modal Form -->
-    <div id="modal" style="display: none;">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
-            <form id="process-form">
-                <label for="title">Title:</label>
-                <input type="text" id="title" name="title" required><br>
-                <label for="dueDate">Due Date:</label>
-                <input type="date" id="dueDate" name="dueDate" required><br>
-                <label for="status">Status:</label>
-                <select id="status" name="status" required>
-                    <option value="pending">Pending</option>
-                    <option value="completed">Completed</option>
-                    <option value="in-progress">In Progress</option>
-                </select><br>
-                <label for="scope">Scope:</label>
-                <select id="scope" name="scope" required>
-                    <option value="me">Me</option>
-                    <option value="team">Team</option>
-                </select><br>
-                <label for="owner">Owner:</label>
-                <input type="text" id="owner" name="owner" required><br>
-                <button type="submit">Submit</button>
-            </form>
+          <label for="password">Contraseña</label>
+          <input type="password" id="password" name="password" placeholder="••••" required />
+
+          <button type="submit">Ingresar</button>
+          <p id="login-error" class="error-message"></p>
+        </form>
+
+        <div class="demo-box">
+          <strong>Usuarios demo</strong>
+          <p>maria / 1234</p>
+          <p>juan / 1234</p>
         </div>
-    </div>
+      </div>
+    </section>
 
-    <script>
-        function openModal() {
-            document.getElementById('modal').style.display = 'block';
-        }
+    <section id="dashboard-view" class="dashboard-view hidden">
+      <header class="topbar card">
+        <div>
+          <h2 id="welcome-title">Hola</h2>
+          <p>Vista de procesos, calendario y chat interno.</p>
+        </div>
+        <button id="logout-btn" class="secondary-btn">Cerrar sesión</button>
+      </header>
 
-        function closeModal() {
-            document.getElementById('modal').style.display = 'none';
-        }
-    </script>
+      <section class="grid-layout">
+        <article class="card">
+          <h3>Calendario de fechas importantes</h3>
+          <div class="legend">
+            <span class="legend-item">
+              <span class="dot me"></span> Mis fechas
+            </span>
+            <span class="legend-item">
+              <span class="dot team"></span> Equipo
+            </span>
+          </div>
+          <div id="calendar-grid" class="calendar-grid"></div>
+        </article>
+
+        <article class="card">
+          <h3>Personas autorizadas</h3>
+          <ul id="team-list" class="team-list"></ul>
+        </article>
+
+        <article class="card">
+          <h3 id="selected-person-title">Tareas</h3>
+          <ul id="task-list" class="task-list"></ul>
+        </article>
+
+        <article class="card chat-card">
+          <h3>Chat interno por proceso</h3>
+          <div id="chat-thread" class="chat-thread"></div>
+
+          <form id="chat-form" class="chat-form">
+            <input
+              type="text"
+              id="chat-input"
+              placeholder="Escribe un mensaje..."
+              required
+            />
+            <button type="submit">Enviar</button>
+          </form>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
 </body>
 </html>
