@@ -1,12 +1,15 @@
-# App de seguimiento de procesos (demo)
+# App de seguimiento de facturas (demo)
 
-Prototipo web responsive para computador y celular con:
+Prototipo web responsive (usable en PC y Android desde navegador) para controlar facturas de clientes:
 
-- Login de usuario.
-- Calendario de fechas importantes (colores para "mis fechas" y "equipo").
-- Vista de pendientes propios y de equipo autorizado.
-- Detalle de tareas por persona con estado (proceso/completado/bloqueado).
-- Chat interno por proceso.
+- Login con usuario y contraseña.
+- Lista de facturas pendientes.
+- Alta de nueva factura/cliente.
+- Edición de fecha propuesta de pago.
+- Registro de fecha real de pago.
+- Cambio de estado pendiente/pagada.
+- Comentarios de seguimiento por factura.
+- Notificaciones de equipo cuando se crea o modifica una factura.
 
 ## Ejecutar
 
