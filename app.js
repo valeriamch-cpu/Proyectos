@@ -2,188 +2,211 @@ const users = {
   maria: {
     password: '1234',
     name: 'María López',
-    team: 'Operaciones',
+    team: 'Cobranza',
     authorizedTeamMembers: ['María López', 'Juan Pérez', 'Ana Torres'],
   },
   juan: {
     password: '1234',
     name: 'Juan Pérez',
-    team: 'Operaciones',
+    team: 'Cobranza',
     authorizedTeamMembers: ['Juan Pérez', 'María López'],
   },
 };
 
-const teamProcesses = [
+const invoices = [
   {
+    id: 'FAC-1001',
+    client: 'Comercial Delta',
+    amount: 250000,
+    status: 'pendiente',
+    proposedPaymentDate: '2026-04-20',
+    actualPaymentDate: '',
+    comments: 'Cliente solicita confirmación de OC.',
     owner: 'María López',
-    title: 'Validar contrato proveedor A',
-    dueDate: '2026-04-16',
-    status: 'proceso',
-    scope: 'me',
-    processId: 'proc-01',
+    updatedAt: '2026-04-15T10:00:00',
   },
   {
-    owner: 'María López',
-    title: 'Enviar reporte de incidentes',
-    dueDate: '2026-04-18',
-    status: 'completado',
-    scope: 'me',
-    processId: 'proc-02',
-  },
-  {
+    id: 'FAC-1002',
+    client: 'Constructora Norte',
+    amount: 420000,
+    status: 'pendiente',
+    proposedPaymentDate: '2026-04-22',
+    actualPaymentDate: '',
+    comments: 'En revisión con tesorería.',
     owner: 'Juan Pérez',
-    title: 'Cerrar auditoría interna',
-    dueDate: '2026-04-17',
-    status: 'proceso',
-    scope: 'team',
-    processId: 'proc-03',
+    updatedAt: '2026-04-15T12:30:00',
   },
   {
+    id: 'FAC-1003',
+    client: 'Transporte Andino',
+    amount: 130000,
+    status: 'pagada',
+    proposedPaymentDate: '2026-04-10',
+    actualPaymentDate: '2026-04-11',
+    comments: 'Pago recibido con 1 día de atraso.',
     owner: 'Ana Torres',
-    title: 'Actualizar plan de contingencia',
-    dueDate: '2026-04-22',
-    status: 'bloqueado',
-    scope: 'team',
-    processId: 'proc-04',
+    updatedAt: '2026-04-14T09:15:00',
   },
 ];
 
-const processChat = {
-  'proc-01': [
-    { author: 'María López', text: 'Estoy validando cláusulas con legal.' },
-    { author: 'Legal', text: 'Listo, pasamos observaciones hoy.' },
-  ],
-  'proc-02': [{ author: 'María López', text: 'Reporte enviado y aprobado.' }],
-  'proc-03': [{ author: 'Juan Pérez', text: 'Falta evidencia del área de calidad.' }],
-  'proc-04': [{ author: 'Ana Torres', text: 'Bloqueado por espera de presupuesto.' }],
-};
+const notifications = [
+  {
+    id: crypto.randomUUID(),
+    message: 'Ana Torres marcó FAC-1003 como pagada (11/04/2026).',
+    createdAt: '2026-04-14T09:16:00',
+  },
+  {
+    id: crypto.randomUUID(),
+    message: 'Juan Pérez actualizó fecha propuesta de FAC-1002 al 22/04/2026.',
+    createdAt: '2026-04-15T12:31:00',
+  },
+];
 
 const loginView = document.getElementById('login-view');
 const dashboardView = document.getElementById('dashboard-view');
 const loginForm = document.getElementById('login-form');
 const loginError = document.getElementById('login-error');
 const welcomeTitle = document.getElementById('welcome-title');
-const calendarGrid = document.getElementById('calendar-grid');
-const teamList = document.getElementById('team-list');
-const selectedPersonTitle = document.getElementById('selected-person-title');
-const taskList = document.getElementById('task-list');
-const chatThread = document.getElementById('chat-thread');
-const chatForm = document.getElementById('chat-form');
-const chatInput = document.getElementById('chat-input');
+const pendingList = document.getElementById('pending-list');
+const allList = document.getElementById('all-list');
+const selectedInvoiceTitle = document.getElementById('selected-invoice-title');
+const invoiceForm = document.getElementById('invoice-form');
+const newInvoiceForm = document.getElementById('new-invoice-form');
+const notificationList = document.getElementById('notification-list');
+const liveNotification = document.getElementById('live-notification');
 const logoutBtn = document.getElementById('logout-btn');
 
 let currentUser = null;
-let currentProcessId = null;
+let currentInvoiceId = null;
 
 function formatDate(dateISO) {
+  if (!dateISO) return '—';
+
   return new Date(`${dateISO}T00:00:00`).toLocaleDateString('es-CL', {
     day: '2-digit',
-    month: 'short',
+    month: '2-digit',
     year: 'numeric',
   });
 }
 
-function getAccessibleProcesses() {
+function formatCurrency(value) {
+  return new Intl.NumberFormat('es-CL', {
+    style: 'currency',
+    currency: 'CLP',
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function getAccessibleInvoices() {
   if (!currentUser) return [];
-  return teamProcesses.filter((process) =>
-    currentUser.authorizedTeamMembers.includes(process.owner)
+
+  return invoices.filter((invoice) =>
+    currentUser.authorizedTeamMembers.includes(invoice.owner)
   );
 }
 
-function renderCalendar() {
-  calendarGrid.innerHTML = '';
-
-  getAccessibleProcesses().forEach((process) => {
-    const item = document.createElement('article');
-    item.className = `calendar-item ${process.scope}`;
-    item.innerHTML = `
-      <strong>${formatDate(process.dueDate)}</strong>
-      <p>${process.title}</p>
-      <small>${process.owner}</small>
-    `;
-    calendarGrid.appendChild(item);
-  });
+function findInvoiceById(invoiceId) {
+  return invoices.find((invoice) => invoice.id === invoiceId);
 }
 
-function renderPeopleList() {
-  teamList.innerHTML = '';
+function showLiveNotification(message) {
+  liveNotification.textContent = `🔔 ${message}`;
+  liveNotification.classList.remove('hidden');
 
-  const people = [...new Set(getAccessibleProcesses().map((process) => process.owner))];
-
-  people.forEach((person) => {
-    const pending = getAccessibleProcesses().filter(
-      (process) => process.owner === person && process.status !== 'completado'
-    ).length;
-
-    const li = document.createElement('li');
-    li.className = 'person-item';
-    li.textContent = `${person} · ${pending} pendiente(s)`;
-
-    li.addEventListener('click', () => {
-      [...teamList.children].forEach((item) => item.classList.remove('active'));
-      li.classList.add('active');
-      renderTasksForPerson(person);
-    });
-
-    teamList.appendChild(li);
-  });
+  setTimeout(() => {
+    liveNotification.classList.add('hidden');
+  }, 3500);
 }
 
-function renderTasksForPerson(person) {
-  selectedPersonTitle.textContent = `Tareas de ${person}`;
-  taskList.innerHTML = '';
+function pushNotification(message) {
+  notifications.unshift({
+    id: crypto.randomUUID(),
+    message,
+    createdAt: new Date().toISOString(),
+  });
 
-  const tasks = getAccessibleProcesses().filter((process) => process.owner === person);
+  showLiveNotification(message);
+  renderNotifications();
+}
 
-  tasks.forEach((task) => {
+function renderInvoiceList(targetList, source) {
+  targetList.innerHTML = '';
+
+  source.forEach((invoice) => {
     const li = document.createElement('li');
-    li.className = 'task-item';
+    li.className = `invoice-item ${invoice.status}`;
     li.innerHTML = `
-      <strong>${task.title}</strong>
-      <p>Fecha: ${formatDate(task.dueDate)}</p>
-      <p>Estado: <span class="status ${task.status}">${task.status}</span></p>
+      <strong>${invoice.id} · ${invoice.client}</strong>
+      <p>Monto: ${formatCurrency(invoice.amount)}</p>
+      <p>Propuesta: ${formatDate(invoice.proposedPaymentDate)}</p>
+      <p>Pago real: ${formatDate(invoice.actualPaymentDate)}</p>
+      <p>Estado: <span class="status ${invoice.status}">${invoice.status}</span></p>
+      <small>Responsable: ${invoice.owner}</small>
     `;
 
     li.addEventListener('click', () => {
-      currentProcessId = task.processId;
-      renderChat();
+      [...targetList.children].forEach((child) => child.classList.remove('active'));
+      li.classList.add('active');
+      loadInvoiceIntoForm(invoice.id);
     });
 
-    taskList.appendChild(li);
+    targetList.appendChild(li);
   });
 
-  if (tasks.length) {
-    currentProcessId = tasks[0].processId;
-    renderChat();
+  if (!source.length) {
+    targetList.innerHTML = '<li class="muted">No hay facturas para mostrar.</li>';
   }
 }
 
-function renderChat() {
-  chatThread.innerHTML = '';
+function renderPending() {
+  const pending = getAccessibleInvoices().filter((invoice) => invoice.status === 'pendiente');
+  renderInvoiceList(pendingList, pending);
+}
 
-  const messages = processChat[currentProcessId] || [];
-  messages.forEach((message) => {
-    const row = document.createElement('div');
-    row.className = 'chat-message';
-    row.innerHTML = `<b>${message.author}</b><span>${message.text}</span>`;
-    chatThread.appendChild(row);
+function renderAll() {
+  const sorted = [...getAccessibleInvoices()].sort(
+    (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)
+  );
+  renderInvoiceList(allList, sorted);
+}
+
+function loadInvoiceIntoForm(invoiceId) {
+  const invoice = findInvoiceById(invoiceId);
+  if (!invoice) return;
+
+  currentInvoiceId = invoiceId;
+  selectedInvoiceTitle.textContent = `Editar ${invoice.id} · ${invoice.client}`;
+  invoiceForm.classList.remove('hidden');
+
+  invoiceForm.proposedDate.value = invoice.proposedPaymentDate || '';
+  invoiceForm.actualDate.value = invoice.actualPaymentDate || '';
+  invoiceForm.status.value = invoice.status;
+  invoiceForm.comment.value = invoice.comments || '';
+}
+
+function renderNotifications() {
+  notificationList.innerHTML = '';
+
+  notifications.slice(0, 20).forEach((event) => {
+    const li = document.createElement('li');
+    const timestamp = new Date(event.createdAt).toLocaleString('es-CL');
+
+    li.className = 'notification-item';
+    li.innerHTML = `<p>${event.message}</p><small>${timestamp}</small>`;
+    notificationList.appendChild(li);
   });
-
-  if (!messages.length) {
-    chatThread.innerHTML = '<p class="muted">No hay mensajes en este proceso.</p>';
-  }
 }
 
 function renderDashboard() {
   welcomeTitle.textContent = `Hola, ${currentUser.name}`;
-  renderCalendar();
-  renderPeopleList();
+  renderPending();
+  renderAll();
+  renderNotifications();
 
-  const myself = currentUser.name;
-  renderTasksForPerson(myself);
-
-  const firstRow = [...teamList.children].find((node) => node.textContent.includes(myself));
-  if (firstRow) firstRow.classList.add('active');
+  const first = getAccessibleInvoices()[0];
+  if (first) {
+    loadInvoiceIntoForm(first.id);
+  }
 }
 
 loginForm.addEventListener('submit', (event) => {
@@ -204,23 +227,90 @@ loginForm.addEventListener('submit', (event) => {
   renderDashboard();
 });
 
-chatForm.addEventListener('submit', (event) => {
+invoiceForm.addEventListener('submit', (event) => {
   event.preventDefault();
-  if (!currentProcessId || !chatInput.value.trim()) return;
 
-  processChat[currentProcessId] = processChat[currentProcessId] || [];
-  processChat[currentProcessId].push({
-    author: currentUser.name,
-    text: chatInput.value.trim(),
-  });
+  const invoice = findInvoiceById(currentInvoiceId);
+  if (!invoice || !currentUser) return;
 
-  chatInput.value = '';
-  renderChat();
+  const oldProposedDate = invoice.proposedPaymentDate;
+  const oldActualDate = invoice.actualPaymentDate;
+  const oldStatus = invoice.status;
+
+  invoice.proposedPaymentDate = event.target.proposedDate.value;
+  invoice.actualPaymentDate = event.target.actualDate.value;
+  invoice.status = event.target.status.value;
+  invoice.comments = event.target.comment.value.trim();
+  invoice.updatedAt = new Date().toISOString();
+
+  if (oldProposedDate !== invoice.proposedPaymentDate) {
+    pushNotification(
+      `${currentUser.name} cambió fecha propuesta de ${invoice.id} a ${formatDate(
+        invoice.proposedPaymentDate
+      )}.`
+    );
+  }
+
+  if (oldActualDate !== invoice.actualPaymentDate) {
+    pushNotification(
+      `${currentUser.name} cambió fecha real de pago de ${invoice.id} a ${formatDate(
+        invoice.actualPaymentDate
+      )}.`
+    );
+  }
+
+  if (oldStatus !== invoice.status) {
+    pushNotification(`${currentUser.name} cambió estado de ${invoice.id} a ${invoice.status}.`);
+  }
+
+  if (invoice.comments) {
+    pushNotification(`${currentUser.name} agregó comentario en ${invoice.id}: "${invoice.comments}"`);
+  }
+
+  renderPending();
+  renderAll();
+  loadInvoiceIntoForm(invoice.id);
+});
+
+newInvoiceForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (!currentUser) return;
+
+  const formData = new FormData(event.target);
+  const client = formData.get('client').trim();
+  const amount = Number(formData.get('amount'));
+  const proposedDate = formData.get('proposedDate');
+  const comment = formData.get('comment').trim();
+
+  const newInvoice = {
+    id: `FAC-${1000 + invoices.length + 1}`,
+    client,
+    amount,
+    status: 'pendiente',
+    proposedPaymentDate: proposedDate,
+    actualPaymentDate: '',
+    comments: comment,
+    owner: currentUser.name,
+    updatedAt: new Date().toISOString(),
+  };
+
+  invoices.unshift(newInvoice);
+  pushNotification(
+    `${currentUser.name} creó ${newInvoice.id} para ${newInvoice.client} con fecha propuesta ${formatDate(
+      newInvoice.proposedPaymentDate
+    )}.`
+  );
+
+  event.target.reset();
+  renderPending();
+  renderAll();
+  loadInvoiceIntoForm(newInvoice.id);
 });
 
 logoutBtn.addEventListener('click', () => {
   currentUser = null;
-  currentProcessId = null;
+  currentInvoiceId = null;
+  invoiceForm.classList.add('hidden');
   loginForm.reset();
   dashboardView.classList.add('hidden');
   loginView.classList.remove('hidden');
